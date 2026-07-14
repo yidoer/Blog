@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="人间浊物 琅上清书 - 个人博客">
+  <title>人间浊物 琅上清书</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=Noto+Sans+SC:wght@300;400;500&display=swap" rel="stylesheet">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📜</text></svg>">
+  <style>
+    .hero-section { background: var(--bg-primary); }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <a href="index.html" class="site-logo">
+        <span class="logo-seal">清</span>
+        <span>人间浊物</span>
+      </a>
+      <nav>
+        <button class="menu-toggle" id="menu-toggle" aria-label="打开菜单" title="菜单">☰</button>
+        <ul class="nav-menu" id="nav-menu">
+          <li><a href="index.html">首页</a></li>
+          <li><a href="notes.html">小记</a></li>
+          <li><a href="articles.html">文章</a></li>
+          <li><a href="about.html">关于</a></li>
+          <li><button class="theme-toggle" id="theme-toggle" title="切换主题" aria-label="切换主题">☾</button></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main class="site-main">
+    <!-- 封面区域 -->
+    <section class="hero-section">
+      <div class="hero-content">
+        <h1 class="hero-title">人间浊物</h1>
+        <p class="hero-subtitle">琅上清书</p>
+        <div class="hero-divider"></div>
+        <div class="hero-nav">
+          <a href="notes.html">小记</a>
+          <a href="articles.html">文章</a>
+          <a href="about.html">关于</a>
+          <a href="editor.html">编辑</a>
+        </div>
+      </div>
+      <a href="#latest" class="hero-scroll">
+        <span>向下</span>
+        <span>↓</span>
+      </a>
+    </section>
+
+    <!-- 最新内容 -->
+    <section id="latest" class="content-wrapper">
+      <!-- 最新文章 -->
+      <div class="section-header">
+        <h2 class="section-title">最新文章</h2>
+        <a href="articles.html" class="section-more">查看全部 →</a>
+      </div>
+      <div class="article-grid" id="latest-articles">
+        <div class="empty-state">
+          <div class="loading-spinner"></div>
+          <p class="empty-state-text">正在加载...</p>
+        </div>
+      </div>
+
+      <!-- 最新小记 -->
+      <div class="section-header" style="margin-top: 64px;">
+        <h2 class="section-title">最新小记</h2>
+        <a href="notes.html" class="section-more">查看全部 →</a>
+      </div>
+      <div class="notes-list" id="latest-notes">
+        <div class="empty-state">
+          <div class="loading-spinner"></div>
+          <p class="empty-state-text">正在加载...</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <div class="footer-links">
+        <a href="index.html">首页</a>
+        <a href="notes.html">小记</a>
+        <a href="articles.html">文章</a>
+        <a href="about.html">关于</a>
+        <a href="editor.html">编辑</a>
+      </div>
+      <p>&copy; 2024 人间浊物. 以墨为友，以书为伴。</p>
+    </div>
+  </footer>
+
+  <button class="back-to-top" id="back-to-top" title="返回顶部" aria-label="返回顶部">↑</button>
+
+  <script src="js/app.js"></script>
+  <script>
+    (async function() {
+      // 加载最新文章
+      const articles = await BlogApp.loadData('articles');
+      const latestArticlesContainer = document.getElementById('latest-articles');
+      if (articles.length === 0) {
+        latestArticlesContainer.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-state-icon">📝</div>
+            <p class="empty-state-text">暂无文章</p>
+          </div>
+        `;
+      } else {
+        const latest = articles.slice(0, 3);
+        latestArticlesContainer.innerHTML = latest.map((article, index) => `
+          <a href="article.html?id=${article.id}" class="article-card fade-in fade-in-delay-${index + 1}">
+            <div class="article-card-header">
+              <span class="article-date">${BlogApp.formatDate(article.date)}</span>
+              <span class="article-category">${article.category || '未分类'}</span>
+            </div>
+            <h3 class="article-card-title">${article.title}</h3>
+            <p class="article-card-excerpt">${article.excerpt || ''}</p>
+            <div class="article-card-tags">
+              ${(article.tags || []).map(tag => `<span class="article-tag">${tag}</span>`).join('')}
+            </div>
+          </a>
+        `).join('');
+      }
+
+      // 加载最新小记
+      const notes = await BlogApp.loadData('notes');
+      const latestNotesContainer = document.getElementById('latest-notes');
+      if (notes.length === 0) {
+        latestNotesContainer.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-state-icon">📌</div>
+            <p class="empty-state-text">暂无小记</p>
+          </div>
+        `;
+      } else {
+        const latest = notes.slice(0, 4);
+        latestNotesContainer.innerHTML = latest.map((note, index) => `
+          <div class="note-item fade-in fade-in-delay-${index + 1}">
+            <div class="note-date">${BlogApp.formatDate(note.date)}</div>
+            <div class="note-content">${note.content}</div>
+          </div>
+        `).join('');
+      }
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="小记 - 人间浊物 琅上清书">
+  <title>小记 - 人间浊物 琅上清书</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=Noto+Sans+SC:wght@300;400;500&display=swap" rel="stylesheet">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📜</text></svg>">
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <a href="index.html" class="site-logo">
+        <span class="logo-seal">清</span>
+        <span>人间浊物</span>
+      </a>
+      <nav>
+        <button class="menu-toggle" id="menu-toggle" aria-label="打开菜单" title="菜单">☰</button>
+        <ul class="nav-menu" id="nav-menu">
+          <li><a href="index.html">首页</a></li>
+          <li><a href="notes.html">小记</a></li>
+          <li><a href="articles.html">文章</a></li>
+          <li><a href="about.html">关于</a></li>
+          <li><button class="theme-toggle" id="theme-toggle" title="切换主题" aria-label="切换主题">☾</button></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main class="site-main">
+    <div class="content-wrapper">
+      <div class="section-header">
+        <h1 class="section-title">小记</h1>
+      </div>
+      <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 32px; font-family: var(--font-serif); font-style: italic;">
+        片言只语，随感随记。不求长篇，但求真意。
+      </p>
+
+      <div class="notes-list" id="notes-list">
+        <div class="empty-state">
+          <div class="loading-spinner"></div>
+          <p class="empty-state-text">正在加载...</p>
+        </div>
+      </div>
+
+      <div class="pagination" id="pagination" style="display: none;">
+        <button class="pagination-btn" id="prev-btn" disabled>← 上一页</button>
+        <span class="pagination-info" id="page-info">1 / 1</span>
+        <button class="pagination-btn" id="next-btn" disabled>下一页 →</button>
+      </div>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <div class="footer-links">
+        <a href="index.html">首页</a>
+        <a href="notes.html">小记</a>
+        <a href="articles.html">文章</a>
+        <a href="about.html">关于</a>
+      </div>
+      <p>© 2024 人间浊物. 以墨为友，以书为伴。</p>
+    </div>
+  </footer>
+
+  <button class="back-to-top" id="back-to-top" title="返回顶部" aria-label="返回顶部">↑</button>
+
+  <script src="js/app.js"></script>
+  <script>
+    (async function() {
+      const PAGE_SIZE = 10;
+      let currentPage = 1;
+      let allNotes = [];
+
+      allNotes = await BlogApp.loadData('notes');
+      // 按日期倒序排列
+      allNotes.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+      const notesList = document.getElementById('notes-list');
+      const pagination = document.getElementById('pagination');
+      const prevBtn = document.getElementById('prev-btn');
+      const nextBtn = document.getElementById('next-btn');
+      const pageInfo = document.getElementById('page-info');
+
+      function renderPage() {
+        const totalPages = Math.ceil(allNotes.length / PAGE_SIZE) || 1;
+        const start = (currentPage - 1) * PAGE_SIZE;
+        const end = start + PAGE_SIZE;
+        const pageNotes = allNotes.slice(start, end);
+
+        if (pageNotes.length === 0) {
+          notesList.innerHTML = `
+            <div class="empty-state">
+              <div class="empty-state-icon">📌</div>
+              <p class="empty-state-text">暂无小记</p>
+            </div>
+          `;
+        } else {
+          notesList.innerHTML = pageNotes.map((note, index) => `
+            <div class="note-item fade-in fade-in-delay-${Math.min(index + 1, 4)}">
+              <div class="note-date">${BlogApp.formatDate(note.date)}</div>
+              <div class="note-content">${note.content}</div>
+            </div>
+          `).join('');
+        }
+
+        if (totalPages > 1) {
+          pagination.style.display = 'flex';
+          pageInfo.textContent = `${currentPage} / ${totalPages}`;
+          prevBtn.disabled = currentPage <= 1;
+          nextBtn.disabled = currentPage >= totalPages;
+        } else {
+          pagination.style.display = 'none';
+        }
+      }
+
+      prevBtn.addEventListener('click', () => {
+        if (currentPage > 1) {
+          currentPage--;
+          renderPage();
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+      });
+
+      nextBtn.addEventListener('click', () => {
+        const totalPages = Math.ceil(allNotes.length / PAGE_SIZE) || 1;
+        if (currentPage < totalPages) {
+          currentPage++;
+          renderPage();
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+      });
+
+      renderPage();
+    })();
+  </script>
+</body>
+</html>

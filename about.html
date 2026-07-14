@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="关于 - 人间浊物 琅上清书">
+  <title>关于 - 人间浊物 琅上清书</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=Noto+Sans+SC:wght@300;400;500&display=swap" rel="stylesheet">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📜</text></svg>">
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <a href="index.html" class="site-logo">
+        <span class="logo-seal">清</span>
+        <span>人间浊物</span>
+      </a>
+      <nav>
+        <button class="menu-toggle" id="menu-toggle" aria-label="打开菜单" title="菜单">☰</button>
+        <ul class="nav-menu" id="nav-menu">
+          <li><a href="index.html">首页</a></li>
+          <li><a href="notes.html">小记</a></li>
+          <li><a href="articles.html">文章</a></li>
+          <li><a href="about.html">关于</a></li>
+          <li><button class="theme-toggle" id="theme-toggle" title="切换主题" aria-label="切换主题">☾</button></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main class="site-main">
+    <div class="content-wrapper">
+      <div class="section-header">
+        <h1 class="section-title">关于</h1>
+      </div>
+
+      <div class="about-section">
+        <div class="about-content">
+          <div class="about-avatar">清</div>
+          <h2 class="about-name">人间浊物</h2>
+          <p class="about-motto">琅上清书，以墨为友</p>
+
+          <div class="about-text">
+            <p>
+              这里是人间浊物，一个沉迷于文字与思考的角落。在这个信息过载的时代，
+              我试图用文字为自己开辟一片净土。
+            </p>
+            <p>
+              小记记录日常的点滴感悟，文章承载经过沉淀的思考。不求闻达于网络，
+              但求字字发自真心，句句言之有物。
+            </p>
+            <p>
+              正如东坡先生所言：\\\"文章如精金美玉，市有定价，不可人欺也。\\\"
+              我深知自己的文字远未达到这样的境界，但写作本身就是一种修行，
+              是一种与自己对话的方式。
+            </p>
+            <p>
+              如果你喜欢这里的文字，欢迎常来坐坐。如果有想法想交流，也欢迎留言。
+              愿我们在文字中相遇，在思想中共鸣。
+            </p>
+          </div>
+
+          <div class="about-links">
+            <a href="https://github.com" class="about-link" target="_blank" rel="noopener noreferrer">
+              <span>🐙 GitHub</span>
+            </a>
+            <a href="mailto:hello@example.com" class="about-link">
+              <span>✉️ 邮箱</span>
+            </a>
+            <a href="editor.html" class="about-link">
+              <span>✏️ 编辑后台</span>
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- 技术栈说明 -->
+      <div class="section-header" style="margin-top: 64px;">
+        <h2 class="section-title">技术栈</h2>
+      </div>
+
+      <div style="background: var(--bg-card); border: 1px solid var(--border-light); border-radius: var(--radius); padding: 24px 28px; font-size: 0.95rem; line-height: 2; color: var(--text-secondary);">
+        <p><strong>人间浊物 琅上清书</strong> 是一个基于纯静态文件构建的个人博客：</p>
+        <ul style="margin-left: 24px; margin-top: 8px;">
+          <li>纯 HTML + CSS + JavaScript，无框架依赖</li>
+          <li>数据以 JSON 格式存储，便于维护与迁移</li>
+          <li>支持 Markdown 格式的文章编辑</li>
+          <li>内置深色/浅色双主题</li>
+          <li>集成 Giscus 评论系统（基于 GitHub Discussions）</li>
+          <li>图形化编辑后台，支持图片上传与数据导出</li>
+        </ul>
+        <p style="margin-top: 16px;">
+          博客源码托管于 <a href="https://github.com" target="_blank" style="color: var(--accent-color);">GitHub</a>，
+          通过 GitHub Pages 部署发布。
+        </p>
+      </div>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <div class="footer-links">
+        <a href="index.html">首页</a>
+        <a href="notes.html">小记</a>
+        <a href="articles.html">文章</a>
+        <a href="about.html">关于</a>
+      </div>
+      <p>© 2024 人间浊物. 以墨为友，以书为伴。</p>
+    </div>
+  </footer>
+
+  <button class="back-to-top" id="back-to-top" title="返回顶部" aria-label="返回顶部">↑</button>
+
+  <script src="js/app.js"></script>
+</body>
+</html>

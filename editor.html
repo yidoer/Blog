@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="编辑后台 - 人间浊物 琅上清书">
+  <title>编辑后台 - 人间浊物 琅上清书</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=Noto+Sans+SC:wght@300;400;500&display=swap" rel="stylesheet">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✏️</text></svg>">
+</head>
+<body class="editor-page">
+  <header class="site-header">
+    <div class="header-inner">
+      <a href="index.html" class="site-logo">
+        <span class="logo-seal">清</span>
+        <span>编辑后台</span>
+      </a>
+      <nav>
+        <button class="menu-toggle" id="menu-toggle" aria-label="打开菜单" title="菜单">☰</button>
+        <ul class="nav-menu" id="nav-menu">
+          <li><a href="index.html">首页</a></li>
+          <li><a href="notes.html">小记</a></li>
+          <li><a href="articles.html">文章</a></li>
+          <li><a href="about.html">关于</a></li>
+          <li><button class="theme-toggle" id="theme-toggle" title="切换主题" aria-label="切换主题">☾</button></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main class="site-main">
+    <div class="content-wrapper">
+      <div class="section-header">
+        <h1 class="section-title">编辑后台</h1>
+      </div>
+
+      <!-- 状态提示 -->
+      <div class="editor-status">
+        <span class="editor-status-dot"></span>
+        <span>数据自动保存在浏览器本地。编辑完成后，请导出并替换项目中的 data/ 目录文件。</span>
+      </div>
+
+      <!-- 标签页 -->
+      <div class="editor-tabs">
+        <button class="editor-tab active" data-tab="articles">📝 文章管理</button>
+        <button class="editor-tab" data-tab="notes">📌 小记管理</button>
+        <button class="editor-tab" data-tab="export">💾 导出/导入</button>
+      </div>
+
+      <!-- 文章管理面板 -->
+      <div class="editor-panel active" id="panel-articles">
+        <div class="editor-btn-group">
+          <button class="editor-btn editor-btn-primary" onclick="Editor.newArticle()">+ 新建文章</button>
+        </div>
+        <div class="editor-list" id="articles-list">
+          <div class="empty-state">
+            <div class="loading-spinner"></div>
+            <p class="empty-state-text">正在加载...</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 小记管理面板 -->
+      <div class="editor-panel" id="panel-notes">
+        <div class="editor-btn-group">
+          <button class="editor-btn editor-btn-primary" onclick="Editor.newNote()">+ 新建小记</button>
+        </div>
+        <div class="editor-list" id="notes-list">
+          <div class="empty-state">
+            <div class="loading-spinner"></div>
+            <p class="empty-state-text">正在加载...</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 导出/导入面板 -->
+      <div class="editor-panel" id="panel-export">
+        <div class="editor-info-box">
+          <h3>📤 数据导出</h3>
+          <p>编辑完成后，请导出数据文件并替换到项目的 <code>blog/data/</code> 目录下：</p>
+          <ul>
+            <li><code>articles.json</code> — 文章数据</li>
+            <li><code>notes.json</code> — 小记数据</li>
+          </ul>
+          <p style="margin-top: 12px;"><strong>提示：</strong>如果文章中包含较大的 base64 图片，建议在导出后将其提取为独立图片文件，放入 <code>blog/images/</code> 目录，并在 Markdown 中引用相对路径。</p>
+        </div>
+
+        <div class="editor-btn-group">
+          <button class="editor-btn editor-btn-primary" onclick="Editor.exportData()">📥 导出 articles.json + notes.json</button>
+          <button class="editor-btn editor-btn-secondary" onclick="Editor.exportSingleFile()">📦 导出单文件 (blog-data.json)</button>
+        </div>
+
+        <div class="editor-info-box" style="margin-top: 24px;">
+          <h3>📥 数据导入</h3>
+          <p>可以从已有的 JSON 文件导入数据，覆盖当前编辑的内容。</p>
+        </div>
+
+        <div class="editor-btn-group">
+          <button class="editor-btn editor-btn-secondary" onclick="Editor.importArticles()">📄 导入文章 (articles.json)</button>
+          <button class="editor-btn editor-btn-secondary" onclick="Editor.importNotes()">📄 导入小记 (notes.json)</button>
+        </div>
+
+        <div class="editor-info-box" style="margin-top: 24px;">
+          <h3>⚠️ 危险操作</h3>
+          <p>以下操作将不可逆地删除数据，请谨慎使用。</p>
+        </div>
+
+        <div class="editor-btn-group">
+          <button class="editor-btn editor-btn-secondary" onclick="Editor.resetData()">🔄 重置为原始数据</button>
+          <button class="editor-btn editor-btn-danger" onclick="Editor.clearAllData()">🗑️ 清空所有数据</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- 文章编辑模态框 -->
+  <div class="editor-modal" id="article-modal">
+    <div class="editor-modal-content" style="max-width: 900px;">
+      <div class="editor-modal-header">
+        <h3 class="editor-modal-title" id="modal-title">编辑文章</h3>
+        <button class="editor-modal-close" onclick="Editor.closeModal()" title="关闭">×</button>
+      </div>
+      <div class="editor-modal-body">
+        <div class="editor-form-row">
+          <div class="editor-form-group">
+            <label class="editor-form-label">标题 *</label>
+            <input type="text" class="editor-form-input" id="article-title" placeholder="文章标题">
+          </div>
+          <div class="editor-form-group">
+            <label class="editor-form-label">日期</label>
+            <input type="date" class="editor-form-input" id="article-date">
+          </div>
+        </div>
+        <div class="editor-form-row">
+          <div class="editor-form-group">
+            <label class="editor-form-label">分类</label>
+            <input type="text" class="editor-form-input" id="article-category" placeholder="如：随笔、读书、技术">
+          </div>
+          <div class="editor-form-group">
+            <label class="editor-form-label">标签（用逗号分隔）</label>
+            <input type="text" class="editor-form-input" id="article-tags" placeholder="如：自然, 冬, 感悟">
+          </div>
+        </div>
+        <div class="editor-form-group">
+          <label class="editor-form-label">摘要</label>
+          <textarea class="editor-form-input" id="article-excerpt" rows="2" placeholder="文章摘要，简短描述文章内容"></textarea>
+        </div>
+        <div class="editor-form-group">
+          <label class="editor-form-label">图片上传</label>
+          <div class="editor-image-upload" onclick="document.getElementById('article-image-input').click()">
+            <div>📷 点击或拖放图片到编辑器</div>
+            <div style="font-size: 0.8rem; margin-top: 8px; opacity: 0.7;">支持 JPG, PNG, GIF, WebP · 单张 ≤ 3MB</div>
+          </div>
+          <input type="file" id="article-image-input" accept="image/*" multiple style="display:none;"
+            onchange="Editor.handleImageUpload(this, 'article')">
+        </div>
+        <div class="editor-form-group">
+          <label class="editor-form-label">内容（Markdown）</label>
+          <div class="editor-toolbar">
+            <button type="button" class="editor-toolbar-btn" onclick="Editor.insertMarkdown('bold')"><strong>B</strong></button>
+            <button type="button" class="editor-toolbar-btn" onclick="Editor.insertMarkdown('italic')"><em>I</em></button>
+            <button type="button" class="editor-toolbar-btn" onclick="Editor.insertMarkdown('heading')">H2</button>
+            <button type="button" class="editor-toolbar-btn" onclick="Editor.insertMarkdown('heading2')">H3</button>
+            <button type="button" class="editor-toolbar-btn" onclick="Editor.insertMarkdown('quote')">引用</button>
+            <button type="button" class="editor-toolbar-btn" onclick="Editor.insertMarkdown('list')">列表</button>
+            <button type="button" class="editor-toolbar-btn" onclick="Editor.insertMarkdown('link')">链接</button>
+            <button type="button" class="editor-toolbar-btn" onclick="Editor.insertMarkdown('image')">图片</button>
+            <button type="button" class="editor-toolbar-btn" onclick="Editor.insertMarkdown('code')">代码</button>
+            <button type="button" class="editor-toolbar-btn" onclick="Editor.insertMarkdown('hr')">分隔线</button>
+          </div>
+          <div class="editor-split">
+            <div class="editor-split-left">
+              <textarea class="editor-form-textarea" id="article-content" placeholder="# 在此输入 Markdown 格式的文章内容...
+
+支持语法：
+- 标题：# 一级标题 ## 二级标题
+- 粗体：**粗体文字**
+- 斜体：*斜体文字*
+- 引用：> 引用内容
+- 列表：- 列表项
+- 链接：[文字](https://url)
+- 图片：![描述](图片URL)
+- 代码：`行内代码` 或 ```代码块```
+- 分隔线：---"></textarea>
+            </div>
+            <div class="editor-split-right">
+              <div class="editor-preview" id="article-preview">
+                <p style="color: var(--text-muted); text-align: center; padding: 40px 0;">👈 左侧输入 Markdown，右侧实时预览</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="editor-modal-footer">
+        <button class="editor-btn editor-btn-secondary" onclick="Editor.closeModal()">取消</button>
+        <button class="editor-btn editor-btn-primary" onclick="Editor.saveArticle()">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 小记编辑模态框 -->
+  <div class="editor-modal" id="note-modal">
+    <div class="editor-modal-content">
+      <div class="editor-modal-header">
+        <h3 class="editor-modal-title" id="note-modal-title">编辑小记</h3>
+        <button class="editor-modal-close" onclick="Editor.closeModal()" title="关闭">×</button>
+      </div>
+      <div class="editor-modal-body">
+        <div class="editor-form-group">
+          <label class="editor-form-label">日期</label>
+          <input type="date" class="editor-form-input" id="note-date">
+        </div>
+        <div class="editor-form-group">
+          <label class="editor-form-label">图片上传</label>
+          <div class="editor-image-upload" onclick="document.getElementById('note-image-input').click()">
+            <div>📷 点击或拖放图片</div>
+            <div style="font-size: 0.8rem; margin-top: 8px; opacity: 0.7;">单张 ≤ 3MB</div>
+          </div>
+          <input type="file" id="note-image-input" accept="image/*" multiple style="display:none;"
+            onchange="Editor.handleImageUpload(this, 'note')">
+        </div>
+        <div class="editor-form-group">
+          <label class="editor-form-label">内容 *</label>
+          <textarea class="editor-form-textarea" id="note-content" rows="8" placeholder="记录今天的所见所感..."></textarea>
+        </div>
+      </div>
+      <div class="editor-modal-footer">
+        <button class="editor-btn editor-btn-secondary" onclick="Editor.closeModal()">取消</button>
+        <button class="editor-btn editor-btn-primary" onclick="Editor.saveNote()">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <div class="footer-links">
+        <a href="index.html">首页</a>
+        <a href="notes.html">小记</a>
+        <a href="articles.html">文章</a>
+        <a href="about.html">关于</a>
+      </div>
+      <p>© 2024 人间浊物. 以墨为友，以书为伴。</p>
+    </div>
+  </footer>
+
+  <button class="back-to-top" id="back-to-top" title="返回顶部" aria-label="返回顶部">↑</button>
+
+  <script src="js/app.js"></script>
+  <script src="js/editor.js"></script>
+</body>
+</html>
