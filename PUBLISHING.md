@@ -30,3 +30,5 @@
 ## 评论
 
 评论使用 Utterances。正文或小记内容渲染完成后，页面才开始加载评论脚本。仓库需安装 Utterances App，并开启 GitHub Issues。
+
+> 注意：替换 JSON 时必须覆盖整个文件。不要只复制 `"articles": [...]` 这一段追加到旧文件，否则 GitHub Actions 无法解析 JSON。

@@ -77,12 +77,12 @@
       <div class="editor-panel" id="panel-export">
         <div class="editor-info-box">
           <h3>📤 数据导出</h3>
-          <p>编辑完成后，请导出数据文件并替换到项目的 <code>data/</code> 目录下：</p>
+          <p>编辑完成后，请导出数据文件，并用导出的完整文件覆盖项目 <code>data/</code> 目录中的同名文件，不要追加或粘贴到旧 JSON 中：</p>
           <ul>
             <li><code>articles.json</code> — 文章数据</li>
             <li><code>notes.json</code> — 小记数据</li>
           </ul>
-          <p style="margin-top: 12px;"><strong>提示：</strong>如果文章中包含较大的 base64 图片，建议在导出后将其提取为独立图片文件，放入 <code>blog/images/</code> 目录，并在 Markdown 中引用相对路径。</p>
+          <p style="margin-top: 12px;"><strong>提示：</strong>导出后请完整替换 JSON 文件，不要把 <code>"articles": [...]</code> 或 <code>"notes": [...]</code> 追加到旧文件中。较大的图片建议放入 <code>images/</code> 目录，并在 Markdown 中使用相对路径。</p>
         </div>
 
         <div class="editor-btn-group">

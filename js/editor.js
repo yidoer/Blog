@@ -335,7 +335,7 @@ const Editor = {
     const notesJson = JSON.stringify({ notes: this.data.notes }, null, 2);
     this.downloadFile(articlesJson, 'articles.json', 'application/json');
     setTimeout(() => this.downloadFile(notesJson, 'notes.json', 'application/json'), 200);
-    this.showToast('数据已导出，请下载后替换到项目的 data/ 目录', 'success');
+    this.showToast('数据已导出，请用完整 JSON 文件覆盖项目的 data/ 同名文件，不要追加内容', 'success');
   },
 
   exportSingleFile() {
