@@ -1930,3 +1930,68 @@ body {
   font-size: 1.05rem;
   line-height: 1.9;
 }
+
+/* =====================================================
+   首页与列表页预览尺寸：限制宽度与行数，末尾省略号
+   ===================================================== */
+
+.article-grid,
+.notes-list {
+  width: 100%;
+  max-width: 680px;
+  margin-inline: auto;
+}
+
+.article-card,
+.note-item {
+  width: 100%;
+  min-width: 0;
+}
+
+.article-card-title {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+
+.article-card-excerpt {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  max-height: 5.1em;
+}
+
+.note-content {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+  line-clamp: 4;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  max-height: 7.2em;
+}
+
+@media (max-width: 600px) {
+  .article-card,
+  .note-item {
+    padding: 20px 22px;
+  }
+
+  .article-card-excerpt {
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    max-height: 3.4em;
+  }
+
+  .note-content {
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    max-height: 5.4em;
+  }
+}
