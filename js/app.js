@@ -272,6 +272,13 @@ const BlogApp = {
     return `${year}.${month}.${day}`;
   },
 
+  // 预览文本截断：超出长度时以省略号结尾，保证预览卡片整齐
+  truncate(text, maxLen = 100) {
+    const str = String(text || '');
+    if (str.length <= maxLen) return str;
+    return str.slice(0, maxLen) + '…';
+  },
+
   // 导航高亮
   highlightNav() {
     const pathname = window.location.pathname;

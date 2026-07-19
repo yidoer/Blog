@@ -100,7 +100,7 @@
           notesList.innerHTML = pageNotes.map((note, index) => `
             <a href="${BlogApp.noteUrl(note)}" class="note-item note-link fade-in fade-in-delay-${Math.min(index + 1, 4)}">
               <div class="note-date">${BlogApp.formatDate(note.date)}</div>
-              <div class="note-content">${note.content}</div>
+              <div class="note-content">${BlogApp.truncate(note.content, 80)}</div>
               <span class="note-comment-link">查看与评论 →</span>
             </a>
           `).join('');

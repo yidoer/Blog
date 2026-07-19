@@ -115,7 +115,7 @@
               <span class="article-category">${article.category || '未分类'}</span>
             </div>
             <h3 class="article-card-title">${article.title}</h3>
-            <p class="article-card-excerpt">${article.excerpt || ''}</p>
+            <p class="article-card-excerpt">${BlogApp.truncate(article.excerpt || '', 80)}</p>
             <div class="article-card-tags">
               ${(article.tags || []).map(tag => `<span class="article-tag">${tag}</span>`).join('')}
             </div>
@@ -138,7 +138,7 @@
         latestNotesContainer.innerHTML = latest.map((note, index) => `
           <a href="${BlogApp.noteUrl(note)}" class="note-item note-link fade-in fade-in-delay-${index + 1}">
             <div class="note-date">${BlogApp.formatDate(note.date)}</div>
-            <div class="note-content">${note.content}</div>
+            <div class="note-content">${BlogApp.truncate(note.content, 80)}</div>
             <span class="note-comment-link">查看与评论 →</span>
           </a>
         `).join('');
