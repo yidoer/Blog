@@ -200,9 +200,13 @@ const Editor = {
   saveNote() {
     const content = document.getElementById('note-content').value.trim();
     if (!content) { this.showToast('请输入小记内容', 'error'); return; }
+    const noteId = this.current.id || 'note-' + Date.now() + '-' + Math.random().toString(36).substr(2, 6);
+    const date = document.getElementById('note-date').value || new Date().toISOString().split('T')[0];
+    const existingNote = this.data.notes.find(note => note.id === this.current.id);
     const note = {
-      id: this.current.id || 'note-' + Date.now() + '-' + Math.random().toString(36).substr(2, 6),
-      date: document.getElementById('note-date').value || new Date().toISOString().split('T')[0],
+      id: noteId,
+      path: existingNote?.path || `/notes/${date.replaceAll('-', '/')}/${noteId}/`,
+      date,
       content
     };
     if (this.current.id) {
@@ -331,7 +335,7 @@ const Editor = {
     const notesJson = JSON.stringify({ notes: this.data.notes }, null, 2);
     this.downloadFile(articlesJson, 'articles.json', 'application/json');
     setTimeout(() => this.downloadFile(notesJson, 'notes.json', 'application/json'), 200);
-    this.showToast('数据已导出，请下载后替换到 blog/data/ 目录', 'success');
+    this.showToast('数据已导出，请下载后替换到项目的 data/ 目录', 'success');
   },
 
   exportSingleFile() {

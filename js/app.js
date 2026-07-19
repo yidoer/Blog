@@ -49,7 +49,7 @@ const Markdown = {
     html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
 
     // 图片 ![alt](url)
-    html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1">');
+    html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" loading="lazy" decoding="async">');
 
     // 引用
     const lines = html.split('\n');
@@ -254,6 +254,13 @@ const BlogApp = {
     const date = String(article.date || new Date().toISOString().slice(0, 10)).split('-');
     const slug = (article.slug || article.id || 'article').toString().toLowerCase().replace(/[^a-z0-9\u4e00-\u9fff]+/g, '-').replace(/^-+|-+$/g, '');
     return `/articles/${date[0]}/${date[1] || '01'}/${date[2] || '01'}/${slug}/`;
+  },
+
+  // 小记永久链接
+  noteUrl(note) {
+    if (note.path) return note.path;
+    const date = String(note.date || new Date().toISOString().slice(0, 10)).split('-');
+    return `/notes/${date[0]}/${String(date[1] || '01').padStart(2, '0')}/${String(date[2] || '01').padStart(2, '0')}/${note.id || 'note'}/`;
   },
 
   // 格式化日期

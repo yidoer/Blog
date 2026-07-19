@@ -4,6 +4,7 @@ const path = require('path');
 const root = path.resolve(__dirname, '..');
 const data = JSON.parse(fs.readFileSync(path.join(root, 'data', 'articles.json'), 'utf8'));
 const template = fs.readFileSync(path.join(__dirname, 'article-template.html'), 'utf8');
+fs.rmSync(path.join(root, 'articles'), { recursive: true, force: true });
 
 for (const article of data.articles || []) {
   if (!article.id || !article.path || !article.path.startsWith('/articles/')) {

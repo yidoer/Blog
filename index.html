@@ -6,9 +6,6 @@
   <meta name="description" content="人间浊物 琅上清书 - 个人博客">
   <title>人间浊物 琅上清书</title>
   <link rel="stylesheet" href="css/style.css">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=Noto+Sans+SC:wght@300;400;500&display=swap" rel="stylesheet">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📜</text></svg>">
   <style>
     .hero-section { background: var(--bg-primary); }
@@ -139,10 +136,11 @@
       } else {
         const latest = notes.slice(0, 4);
         latestNotesContainer.innerHTML = latest.map((note, index) => `
-          <div class="note-item fade-in fade-in-delay-${index + 1}">
+          <a href="${BlogApp.noteUrl(note)}" class="note-item note-link fade-in fade-in-delay-${index + 1}">
             <div class="note-date">${BlogApp.formatDate(note.date)}</div>
             <div class="note-content">${note.content}</div>
-          </div>
+            <span class="note-comment-link">查看与评论 →</span>
+          </a>
         `).join('');
       }
     })();
