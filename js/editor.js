@@ -4,12 +4,17 @@
  */
 const Editor = {
   data: { articles: [], notes: [] },
+  deleted: { articles: [], notes: [] },
+  dirty: { articles: [], notes: [] },
   current: { type: null, id: null },
   imageCache: {},
+  previewUrls: {},
+  projectDirHandle: null,
 
   // ==================== 初始化 ====================
   async init() {
     this.loadFromStorage();
+    await this.loadPendingImages();
     if (this.data.articles.length === 0 && this.data.notes.length === 0) {
       await this.loadFromFiles();
     }
@@ -18,14 +23,19 @@ const Editor = {
     this.initTabs();
     this.initDragDrop();
     this.initPreviewListeners();
+    this.updateEnvironmentStatus();
   },
 
   loadFromStorage() {
     try {
       const a = localStorage.getItem('blog-editor-articles');
       const n = localStorage.getItem('blog-editor-notes');
+      const deleted = localStorage.getItem('blog-editor-deleted');
+      const dirty = localStorage.getItem('blog-editor-dirty');
       if (a) this.data.articles = JSON.parse(a);
       if (n) this.data.notes = JSON.parse(n);
+      if (deleted) this.deleted = JSON.parse(deleted);
+      if (dirty) this.dirty = JSON.parse(dirty);
     } catch (e) { console.error('Storage load error:', e); }
   },
 
@@ -42,8 +52,15 @@ const Editor = {
   },
 
   saveToStorage() {
-    localStorage.setItem('blog-editor-articles', JSON.stringify(this.data.articles));
-    localStorage.setItem('blog-editor-notes', JSON.stringify(this.data.notes));
+    try {
+      localStorage.setItem('blog-editor-articles', JSON.stringify(this.data.articles));
+      localStorage.setItem('blog-editor-notes', JSON.stringify(this.data.notes));
+      localStorage.setItem('blog-editor-deleted', JSON.stringify(this.deleted));
+      localStorage.setItem('blog-editor-dirty', JSON.stringify(this.dirty));
+    } catch (error) {
+      console.error('Storage save error:', error);
+      this.showToast('浏览器本地空间不足，请选择项目目录后保存', 'error');
+    }
   },
 
   // ==================== 标签页 ====================
@@ -109,7 +126,7 @@ const Editor = {
     this.updateArticlePreview();
   },
 
-  saveArticle() {
+  async saveArticle() {
     const title = document.getElementById('article-title').value.trim();
     if (!title) { this.showToast('请输入文章标题', 'error'); return; }
     const articleId = this.current.id || 'article-' + Date.now() + '-' + Math.random().toString(36).substr(2, 6);
@@ -132,18 +149,23 @@ const Editor = {
     } else {
       this.data.articles.push(art);
     }
+    this.deleted.articles = this.deleted.articles.filter(id => id !== articleId);
+    if (!this.dirty.articles.includes(articleId)) this.dirty.articles.push(articleId);
     this.saveToStorage();
     this.renderArticlesList();
     this.closeModal();
-    this.showToast('文章已保存', 'success');
+    const synced = await this.syncProjectDataIfConnected();
+    this.showToast(synced ? '文章已保存并写入项目' : '文章已保存到浏览器', 'success');
   },
 
-  deleteArticle(id) {
+  async deleteArticle(id) {
     if (!confirm('确定删除这篇文章？不可撤销。')) return;
     this.data.articles = this.data.articles.filter(a => a.id !== id);
+    if (!this.deleted.articles.includes(id)) this.deleted.articles.push(id);
     this.saveToStorage();
     this.renderArticlesList();
-    this.showToast('文章已删除', 'success');
+    const synced = await this.syncProjectDataIfConnected();
+    this.showToast(synced ? '文章已删除并写入项目' : '文章已删除', 'success');
   },
 
   clearArticleForm() {
@@ -197,7 +219,7 @@ const Editor = {
     document.getElementById('note-modal').classList.add('active');
   },
 
-  saveNote() {
+  async saveNote() {
     const content = document.getElementById('note-content').value.trim();
     if (!content) { this.showToast('请输入小记内容', 'error'); return; }
     const noteId = this.current.id || 'note-' + Date.now() + '-' + Math.random().toString(36).substr(2, 6);
@@ -215,18 +237,23 @@ const Editor = {
     } else {
       this.data.notes.push(note);
     }
+    this.deleted.notes = this.deleted.notes.filter(id => id !== noteId);
+    if (!this.dirty.notes.includes(noteId)) this.dirty.notes.push(noteId);
     this.saveToStorage();
     this.renderNotesList();
     this.closeModal();
-    this.showToast('小记已保存', 'success');
+    const synced = await this.syncProjectDataIfConnected();
+    this.showToast(synced ? '小记已保存并写入项目' : '小记已保存到浏览器', 'success');
   },
 
-  deleteNote(id) {
+  async deleteNote(id) {
     if (!confirm('确定删除这条小记？不可撤销。')) return;
     this.data.notes = this.data.notes.filter(n => n.id !== id);
+    if (!this.deleted.notes.includes(id)) this.deleted.notes.push(id);
     this.saveToStorage();
     this.renderNotesList();
-    this.showToast('小记已删除', 'success');
+    const synced = await this.syncProjectDataIfConnected();
+    this.showToast(synced ? '小记已删除并写入项目' : '小记已删除', 'success');
   },
 
   // ==================== Markdown 编辑器 ====================
@@ -235,6 +262,13 @@ const Editor = {
     const preview = document.getElementById('article-preview');
     if (preview && typeof Markdown !== 'undefined') {
       preview.innerHTML = Markdown.parse(content);
+      preview.querySelectorAll('img').forEach(image => {
+        const blob = this.imageCache[image.getAttribute('src')];
+        if (!blob) return;
+        const imagePath = image.getAttribute('src');
+        if (!this.previewUrls[imagePath]) this.previewUrls[imagePath] = URL.createObjectURL(blob);
+        image.src = this.previewUrls[imagePath];
+      });
     }
   },
 
@@ -270,31 +304,15 @@ const Editor = {
   },
 
   // ==================== 图片上传 ====================
-  handleImageUpload(input, type) {
+  async handleImageUpload(input, type) {
     const files = Array.from(input.files || []);
     if (!files.length) return;
-    files.forEach(file => {
-      if (file.size > 3 * 1024 * 1024) {
-        this.showToast(`「${file.name}」过大（>3MB），建议压缩后上传`, 'error'); return;
-      }
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        const base64 = ev.target.result;
-        const ta = document.getElementById(`${type}-content`);
-        if (ta) {
-          const pos = ta.selectionStart || ta.value.length;
-          const before = ta.value.substring(0, pos);
-          const after = ta.value.substring(pos);
-          const md = `\n\n![${file.name}](${base64})\n\n`;
-          ta.value = before + md + after;
-          ta.selectionStart = ta.selectionEnd = pos + md.length;
-          this.updateArticlePreview();
-        }
-        this.showToast(`图片「${file.name}」已插入`, 'success');
-      };
-      reader.readAsDataURL(file);
-    });
-    input.value = '';
+    try {
+      if (this.supportsProjectDirectory() && !await this.ensureProjectAccess()) return;
+      for (const file of files) await this.insertImageFile(file, type);
+    } finally {
+      input.value = '';
+    }
   },
 
   initDragDrop() {
@@ -303,30 +321,365 @@ const Editor = {
       if (!ta) return;
       ta.addEventListener('dragover', (e) => { e.preventDefault(); ta.style.borderColor = 'var(--accent-color)'; });
       ta.addEventListener('dragleave', (e) => { e.preventDefault(); ta.style.borderColor = ''; });
-      ta.addEventListener('drop', (e) => {
+      ta.addEventListener('drop', async (e) => {
         e.preventDefault();
         ta.style.borderColor = '';
         const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
         if (!files.length) return;
         const type = id === 'article-content' ? 'article' : 'note';
-        files.forEach(file => {
-          if (file.size > 3 * 1024 * 1024) {
-            this.showToast(`「${file.name}」过大（>3MB），建议压缩后上传`, 'error'); return;
-          }
-          const reader = new FileReader();
-          reader.onload = (ev) => {
-            const base64 = ev.target.result;
-            const pos = ta.selectionStart || ta.value.length;
-            const md = `\n\n![${file.name}](${base64})\n\n`;
-            ta.value = ta.value.substring(0, pos) + md + ta.value.substring(pos);
-            ta.selectionStart = ta.selectionEnd = pos + md.length;
-            if (type === 'article') this.updateArticlePreview();
-            this.showToast(`图片「${file.name}」已插入`, 'success');
-          };
-          reader.readAsDataURL(file);
-        });
+        if (this.supportsProjectDirectory() && !await this.ensureProjectAccess()) return;
+        for (const file of files) await this.insertImageFile(file, type);
       });
     });
+  },
+
+  async insertImageFile(file, type) {
+    if (file.size > 20 * 1024 * 1024) {
+      this.showToast(`「${file.name}」超过 20MB，请先压缩`, 'error');
+      return;
+    }
+    try {
+      const date = document.getElementById(`${type}-date`)?.value || new Date().toISOString().split('T')[0];
+      const imagePath = this.projectDirHandle
+        ? await this.writeImageFile(file, file.name, date)
+        : await this.cacheImageFile(file, file.name, date);
+      const textarea = document.getElementById(`${type}-content`);
+      if (!textarea) return;
+      const position = textarea.selectionStart ?? textarea.value.length;
+      const markdown = `\n\n![${file.name.replaceAll(']', '')}](${imagePath})\n\n`;
+      textarea.value = textarea.value.substring(0, position) + markdown + textarea.value.substring(position);
+      textarea.selectionStart = textarea.selectionEnd = position + markdown.length;
+      if (type === 'article') this.updateArticlePreview();
+      const location = this.projectDirHandle ? '项目目录' : '手机待发布区';
+      this.showToast(`图片「${file.name}」已保存到${location}`, 'success');
+    } catch (error) {
+      console.error('Image save error:', error);
+      this.showToast(`图片保存失败：${error.message}`, 'error');
+    }
+  },
+
+  supportsProjectDirectory() {
+    const mobile = navigator.userAgentData?.mobile || /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+    return Boolean(window.showDirectoryPicker) && !mobile;
+  },
+
+  async connectProjectDirectory() {
+    if (!window.showDirectoryPicker) {
+      this.showToast('当前浏览器不支持目录写入，请使用最新版 Chrome 或 Edge', 'error');
+      return false;
+    }
+    try {
+      const handle = await window.showDirectoryPicker({ id: 'yidoer-blog-project', mode: 'readwrite' });
+      const dataDirectory = await handle.getDirectoryHandle('data');
+      await dataDirectory.getFileHandle('articles.json');
+      await dataDirectory.getFileHandle('notes.json');
+      this.projectDirHandle = handle;
+      this.updateProjectStatus(true);
+      this.showToast('项目目录已连接，后续保存将自动写入', 'success');
+      return true;
+    } catch (error) {
+      if (error.name !== 'AbortError') {
+        console.error('Project directory error:', error);
+        this.showToast('请选择包含 data、images 目录的博客根目录', 'error');
+      }
+      return false;
+    }
+  },
+
+  async ensureProjectAccess() {
+    if (!this.projectDirHandle) return this.connectProjectDirectory();
+    const options = { mode: 'readwrite' };
+    if (await this.projectDirHandle.queryPermission(options) === 'granted') return true;
+    return await this.projectDirHandle.requestPermission(options) === 'granted';
+  },
+
+  async syncProjectDataIfConnected() {
+    if (!this.projectDirHandle) return false;
+    const synced = await this.writeProjectData({ silent: true });
+    if (!synced) this.showToast('自动写入失败，请重新连接项目目录', 'error');
+    return synced;
+  },
+
+  async writeProjectData({ silent = false } = {}) {
+    try {
+      if (!await this.ensureProjectAccess()) return false;
+      await this.migrateEmbeddedImages();
+      await this.flushPendingImagesToProject();
+      const dataDirectory = await this.projectDirHandle.getDirectoryHandle('data');
+      await this.writeTextFile(dataDirectory, 'articles.json', JSON.stringify({ articles: this.data.articles }, null, 2) + '\n');
+      await this.writeTextFile(dataDirectory, 'notes.json', JSON.stringify({ notes: this.data.notes }, null, 2) + '\n');
+      this.saveToStorage();
+      if (!silent) this.showToast('数据和图片已直接写入项目，无需复制粘贴', 'success');
+      return true;
+    } catch (error) {
+      console.error('Project write error:', error);
+      if (!silent) this.showToast(`写入项目失败：${error.message}`, 'error');
+      return false;
+    }
+  },
+
+  async writeTextFile(directory, filename, content) {
+    const fileHandle = await directory.getFileHandle(filename, { create: true });
+    const writable = await fileHandle.createWritable();
+    await writable.write(content);
+    await writable.close();
+  },
+
+  async writeImageFile(blob, originalName, date) {
+    const safeDate = /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : new Date().toISOString().split('T')[0];
+    let directory = await this.projectDirHandle.getDirectoryHandle('images', { create: true });
+    directory = await directory.getDirectoryHandle('uploads', { create: true });
+    for (const segment of safeDate.split('-')) {
+      directory = await directory.getDirectoryHandle(segment, { create: true });
+    }
+    const filename = this.uniqueImageName(originalName, blob.type);
+    const fileHandle = await directory.getFileHandle(filename, { create: true });
+    const writable = await fileHandle.createWritable();
+    await writable.write(blob);
+    await writable.close();
+    return `/images/uploads/${safeDate.replaceAll('-', '/')}/${filename}`;
+  },
+
+  async flushPendingImagesToProject() {
+    for (const [imagePath, blob] of Object.entries(this.imageCache)) {
+      let directory = this.projectDirHandle;
+      const segments = imagePath.replace(/^\//, '').split('/');
+      const filename = segments.pop();
+      for (const segment of segments) directory = await directory.getDirectoryHandle(segment, { create: true });
+      const fileHandle = await directory.getFileHandle(filename, { create: true });
+      const writable = await fileHandle.createWritable();
+      await writable.write(blob);
+      await writable.close();
+    }
+    if (Object.keys(this.imageCache).length) await this.clearPendingImages();
+  },
+
+  async cacheImageFile(blob, originalName, date) {
+    const safeDate = /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : new Date().toISOString().split('T')[0];
+    const imagePath = `/images/uploads/${safeDate.replaceAll('-', '/')}/${this.uniqueImageName(originalName, blob.type)}`;
+    this.imageCache[imagePath] = blob;
+    await this.savePendingImage(imagePath, blob);
+    this.updatePendingImagesStatus();
+    return imagePath;
+  },
+
+  openImageDatabase() {
+    return new Promise((resolve, reject) => {
+      const request = indexedDB.open('blog-editor-images', 1);
+      request.onupgradeneeded = () => request.result.createObjectStore('images');
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+  },
+
+  async savePendingImage(imagePath, blob) {
+    const database = await this.openImageDatabase();
+    await new Promise((resolve, reject) => {
+      const transaction = database.transaction('images', 'readwrite');
+      transaction.objectStore('images').put(blob, imagePath);
+      transaction.oncomplete = resolve;
+      transaction.onerror = () => reject(transaction.error);
+    });
+    database.close();
+  },
+
+  async loadPendingImages() {
+    if (!window.indexedDB) return;
+    try {
+      const database = await this.openImageDatabase();
+      const entries = await new Promise((resolve, reject) => {
+        const request = database.transaction('images').objectStore('images').getAllKeys();
+        request.onsuccess = async () => {
+          const keys = request.result;
+          const transaction = database.transaction('images');
+          const store = transaction.objectStore('images');
+          const values = await Promise.all(keys.map(key => new Promise((resolveValue, rejectValue) => {
+            const itemRequest = store.get(key);
+            itemRequest.onsuccess = () => resolveValue([key, itemRequest.result]);
+            itemRequest.onerror = () => rejectValue(itemRequest.error);
+          })));
+          resolve(values);
+        };
+        request.onerror = () => reject(request.error);
+      });
+      database.close();
+      this.imageCache = Object.fromEntries(entries);
+      this.updatePendingImagesStatus();
+    } catch (error) {
+      console.error('Pending image load error:', error);
+    }
+  },
+
+  async clearPendingImages() {
+    if (!window.indexedDB) return;
+    const database = await this.openImageDatabase();
+    await new Promise((resolve, reject) => {
+      const transaction = database.transaction('images', 'readwrite');
+      transaction.objectStore('images').clear();
+      transaction.oncomplete = resolve;
+      transaction.onerror = () => reject(transaction.error);
+    });
+    database.close();
+    Object.values(this.previewUrls).forEach(url => URL.revokeObjectURL(url));
+    this.previewUrls = {};
+    this.imageCache = {};
+    this.updatePendingImagesStatus();
+  },
+
+  updatePendingImagesStatus() {
+    const status = document.getElementById('pending-images-status');
+    if (status) status.textContent = `待发布图片：${Object.keys(this.imageCache).length} 张`;
+  },
+
+  async publishToGitHub() {
+    const tokenInput = document.getElementById('github-token');
+    const token = tokenInput?.value.trim();
+    if (!token) {
+      this.showToast('请输入 GitHub Fine-grained Token', 'error');
+      tokenInput?.focus();
+      return;
+    }
+    const button = document.getElementById('github-publish-button');
+    if (button) {
+      button.disabled = true;
+      button.textContent = '正在发布...';
+    }
+    try {
+      await this.publishGitHubCommit(token);
+      await this.clearPendingImages();
+      this.deleted = { articles: [], notes: [] };
+      this.dirty = { articles: [], notes: [] };
+      this.saveToStorage();
+      if (tokenInput) tokenInput.value = '';
+      this.showToast('已发布到 GitHub，Pages 正在自动部署', 'success');
+    } catch (error) {
+      console.error('GitHub publish error:', error);
+      this.showToast(`发布失败：${error.message}`, 'error');
+    } finally {
+      if (button) {
+        button.disabled = false;
+        button.textContent = '🚀 发布到 GitHub';
+      }
+    }
+  },
+
+  async publishGitHubCommit(token, retry = true) {
+    const repository = 'yidoer/yidoer.github.io';
+    const headers = {
+      Accept: 'application/vnd.github+json',
+      Authorization: `Bearer ${token}`,
+      'X-GitHub-Api-Version': '2022-11-28'
+    };
+    const reference = await this.githubRequest(`https://api.github.com/repos/${repository}/git/ref/heads/main`, headers);
+    const parentSha = reference.object.sha;
+    const parentCommit = await this.githubRequest(`https://api.github.com/repos/${repository}/git/commits/${parentSha}`, headers);
+    const remoteArticles = await this.loadGitHubData(repository, 'data/articles.json', headers, 'articles');
+    const remoteNotes = await this.loadGitHubData(repository, 'data/notes.json', headers, 'notes');
+    const articles = this.mergePublishedItems(remoteArticles, this.data.articles, this.deleted.articles, this.dirty.articles);
+    const notes = this.mergePublishedItems(remoteNotes, this.data.notes, this.deleted.notes, this.dirty.notes);
+    const tree = [
+      { path: 'data/articles.json', mode: '100644', type: 'blob', content: JSON.stringify({ articles }, null, 2) + '\n' },
+      { path: 'data/notes.json', mode: '100644', type: 'blob', content: JSON.stringify({ notes }, null, 2) + '\n' }
+    ];
+    for (const [imagePath, blob] of Object.entries(this.imageCache)) {
+      const imageBlob = await this.githubRequest(`https://api.github.com/repos/${repository}/git/blobs`, headers, {
+        content: await this.blobToBase64(blob),
+        encoding: 'base64'
+      });
+      tree.push({ path: imagePath.replace(/^\//, ''), mode: '100644', type: 'blob', sha: imageBlob.sha });
+    }
+    const createdTree = await this.githubRequest(`https://api.github.com/repos/${repository}/git/trees`, headers, {
+      base_tree: parentCommit.tree.sha,
+      tree
+    });
+    const commit = await this.githubRequest(`https://api.github.com/repos/${repository}/git/commits`, headers, {
+      message: `手机发布：${new Date().toLocaleString('zh-CN')}`,
+      tree: createdTree.sha,
+      parents: [parentSha]
+    });
+    try {
+      await this.githubRequest(`https://api.github.com/repos/${repository}/git/refs/heads/main`, headers, { sha: commit.sha, force: false }, 'PATCH');
+    } catch (error) {
+      if (retry && error.status === 422) return this.publishGitHubCommit(token, false);
+      throw error;
+    }
+    this.data = { articles, notes };
+  },
+
+  async loadGitHubData(repository, filePath, headers, key) {
+    const response = await this.githubRequest(`https://api.github.com/repos/${repository}/contents/${filePath}?ref=main`, headers);
+    const text = new TextDecoder().decode(Uint8Array.from(atob(response.content.replace(/\s/g, '')), character => character.charCodeAt(0)));
+    return JSON.parse(text)[key] || [];
+  },
+
+  mergePublishedItems(remoteItems, localItems, deletedIds, dirtyIds) {
+    const merged = new Map(remoteItems.filter(item => !deletedIds.includes(item.id)).map(item => [item.id, item]));
+    localItems.filter(item => dirtyIds.includes(item.id) || !merged.has(item.id)).forEach(item => merged.set(item.id, item));
+    return [...merged.values()];
+  },
+
+  async githubRequest(url, headers, body, method = body ? 'POST' : 'GET') {
+    const response = await fetch(url, {
+      method,
+      headers: body ? { ...headers, 'Content-Type': 'application/json' } : headers,
+      body: body ? JSON.stringify(body) : undefined
+    });
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      const error = new Error(response.status === 401 ? '令牌无效或已过期' : response.status === 403 ? '令牌没有仓库 Contents 写入权限' : data.message || `GitHub 返回 ${response.status}`);
+      error.status = response.status;
+      throw error;
+    }
+    return response.status === 204 ? null : response.json();
+  },
+
+  blobToBase64(blob) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result.split(',')[1]);
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(blob);
+    });
+  },
+
+  uniqueImageName(originalName, mimeType) {
+    const extensionMap = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/gif': 'gif', 'image/webp': 'webp', 'image/svg+xml': 'svg', 'image/avif': 'avif' };
+    const originalExtension = originalName.includes('.') ? originalName.split('.').pop().toLowerCase() : '';
+    const extension = extensionMap[mimeType] || originalExtension.replace(/[^a-z0-9]/g, '') || 'img';
+    const basename = originalName.replace(/\.[^.]+$/, '').normalize('NFKD').replace(/[^a-zA-Z0-9\u4e00-\u9fff_-]+/g, '-').replace(/^-+|-+$/g, '') || 'image';
+    return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${basename}.${extension}`;
+  },
+
+  async migrateEmbeddedImages() {
+    let migratedCount = 0;
+    for (const collection of [this.data.articles, this.data.notes]) {
+      for (const item of collection) {
+        const matches = [...(item.content || '').matchAll(/!\[([^\]]*)\]\((data:image\/([a-zA-Z0-9.+-]+);base64,[A-Za-z0-9+/=\s]+)\)/g)];
+        if (!matches.length) continue;
+        let content = item.content;
+        for (const match of matches) {
+          const blob = await fetch(match[2]).then(response => response.blob());
+          const imagePath = await this.writeImageFile(blob, `image.${match[3]}`, item.date || new Date().toISOString().split('T')[0]);
+          content = content.replace(match[0], `![${match[1]}](${imagePath})`);
+          migratedCount += 1;
+        }
+        item.content = content;
+      }
+    }
+    if (migratedCount) this.showToast(`已将 ${migratedCount} 张 Base64 图片迁移到 images/`, 'success');
+  },
+
+  updateProjectStatus(connected) {
+    const status = document.getElementById('project-storage-status');
+    if (status) status.textContent = connected ? '已连接项目目录：保存会同步写入 data/，图片写入 images/' : '尚未连接项目目录';
+  },
+
+  updateEnvironmentStatus() {
+    const status = document.getElementById('project-storage-status');
+    if (!status) return;
+    status.textContent = this.supportsProjectDirectory()
+      ? '电脑模式：选择项目目录后可直接保存数据和图片。'
+      : '手机模式：内容保存在本机浏览器，完成后到“导出/导入”发布到 GitHub。';
   },
 
   // ==================== 导出/导入 ====================
@@ -409,6 +762,9 @@ const Editor = {
   async resetData() {
     if (!confirm('确定要重置数据吗？这将丢弃所有未导出的修改。')) return;
     await this.loadFromFiles();
+    this.deleted = { articles: [], notes: [] };
+    this.dirty = { articles: [], notes: [] };
+    this.saveToStorage();
     this.renderArticlesList();
     this.renderNotesList();
     this.showToast('数据已重置为原始状态', 'success');
@@ -416,6 +772,8 @@ const Editor = {
 
   clearAllData() {
     if (!confirm('⚠️ 警告：确定要清空所有数据吗？此操作不可撤销！')) return;
+    this.deleted.articles = [...new Set([...this.deleted.articles, ...this.data.articles.map(article => article.id)])];
+    this.deleted.notes = [...new Set([...this.deleted.notes, ...this.data.notes.map(note => note.id)])];
     this.data.articles = [];
     this.data.notes = [];
     this.saveToStorage();

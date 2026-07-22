@@ -45,11 +45,11 @@ const Markdown = {
     // 删除线
     html = html.replace(/~~([^~]+)~~/g, '<del>$1</del>');
 
-    // 链接 [text](url)
-    html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
-
     // 图片 ![alt](url)
     html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" loading="lazy" decoding="async">');
+
+    // 链接 [text](url)，必须在图片之后处理，避免把图片语法误解析成链接
+    html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
 
     // 引用
     const lines = html.split('\n');

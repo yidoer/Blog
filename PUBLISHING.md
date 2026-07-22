@@ -25,7 +25,29 @@
 
 ## 网页编辑器
 
-也可以打开 `editor.html` 编辑并导出 JSON。将导出的文件替换到 `data/` 目录后提交推送即可。文章和小记的新路径会由编辑器自动生成。
+也可以打开 `editor.html`，在“导出/导入”页点击“选择博客根目录”，选择包含 `data/`、`images/` 的项目目录。推荐使用最新版 Chrome 或 Edge。
+
+连接后：
+
+- 上传图片会直接保存到 `images/uploads/年/月/日/`，正文只记录图片路径，不再保存 Base64
+- 保存文章或小记时会自动覆盖 `data/articles.json` 和 `data/notes.json`
+- 已有的 Base64 图片会在“立即写入项目”时自动迁移到 `images/`
+- 不需要再导出、复制或粘贴 JSON；完成后直接用 Git 提交并推送
+
+如果浏览器不支持目录写入，仍可使用备用下载功能，将导出的完整 JSON 文件覆盖到 `data/` 目录。
+
+### 手机发布
+
+手机访问线上 `editor.html` 后，可以正常新建文章、小记，并从相册上传图片。图片会暂存在手机浏览器的 IndexedDB 中，不会转成 Base64 写进正文。
+
+发布步骤：
+
+1. 在“导出/导入”页创建 GitHub Fine-grained Token，仓库选择 `yidoer/yidoer.github.io`，权限只需要 `Contents: Read and write`。
+2. 在手机编辑文章或小记，上传图片并保存。
+3. 在“导出/导入”页输入 Token，点击“发布到 GitHub”。
+4. 发布成功后 Token 会被清空，GitHub Pages 工作流会自动部署。
+
+手机端不会写入电脑本地目录，而是通过 GitHub API 一次提交 JSON 和图片。请不要在公共设备上使用 Token；Token 建议设置短有效期，发布后可以在 GitHub 设置中撤销。
 
 ## 评论
 

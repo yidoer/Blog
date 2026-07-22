@@ -5,6 +5,7 @@
   const content = document.getElementById('note-content');
   if (!note) { content.textContent = '小记未找到。'; return; }
   document.title = `${BlogApp.formatDate(note.date)} - 小记 - 人间浊物 琅上清书`;
-  content.textContent = note.content || '';
+  content.classList.add('markdown-body');
+  content.innerHTML = Markdown.parse(note.content || '');
   BlogApp.initComments();
 })();

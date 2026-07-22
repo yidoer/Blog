@@ -37,7 +37,7 @@
       <!-- 状态提示 -->
       <div class="editor-status">
         <span class="editor-status-dot"></span>
-        <span>数据自动保存在浏览器本地。编辑完成后，请导出并替换项目中的 data/ 目录文件。</span>
+        <span id="project-storage-status">尚未连接项目目录；连接后可直接保存数据和图片。</span>
       </div>
 
       <!-- 标签页 -->
@@ -75,14 +75,38 @@
 
       <!-- 导出/导入面板 -->
       <div class="editor-panel" id="panel-export">
-        <div class="editor-info-box">
-          <h3>📤 数据导出</h3>
-          <p>编辑完成后，请导出数据文件，并用导出的完整文件覆盖项目 <code>data/</code> 目录中的同名文件，不要追加或粘贴到旧 JSON 中：</p>
+        <div class="editor-info-box editor-mobile-publish-box">
+          <h3>📱 手机发布</h3>
+          <p>手机无法直接写入电脑项目目录，但可以把文章、小记和图片一次性提交到 GitHub。令牌只在本次发布期间使用，不会保存。</p>
+          <p><strong>首次准备：</strong>在 GitHub 创建 Fine-grained Token，选择仓库 <code>yidoer/yidoer.github.io</code>，Repository permissions 设置 <code>Contents: Read and write</code>。</p>
+          <p><a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer">打开 GitHub 创建 Token</a>（建议设置较短有效期）</p>
+          <label class="editor-form-label" for="github-token">GitHub Token（不会保存）</label>
+          <input class="editor-form-input" id="github-token" type="password" autocomplete="off" placeholder="github_pat_...">
+          <div class="editor-btn-group editor-mobile-publish-actions">
+            <button class="editor-btn editor-btn-primary" id="github-publish-button" onclick="Editor.publishToGitHub()">🚀 发布到 GitHub</button>
+            <span class="editor-pending-status" id="pending-images-status">待发布图片：0 张</span>
+          </div>
+        </div>
+
+        <div class="editor-info-box editor-desktop-only">
+          <h3>📁 直接保存到项目</h3>
+          <p>点击连接并选择博客根目录（包含 <code>data/</code> 和 <code>images/</code> 的目录）。连接后：</p>
           <ul>
-            <li><code>articles.json</code> — 文章数据</li>
-            <li><code>notes.json</code> — 小记数据</li>
+            <li>文章和小记直接写入 <code>data/articles.json</code>、<code>data/notes.json</code></li>
+            <li>上传图片直接保存到 <code>images/uploads/年/月/日/</code>，不再转 Base64</li>
+            <li>保存文章或小记时自动同步，无需复制粘贴</li>
           </ul>
-          <p style="margin-top: 12px;"><strong>提示：</strong>导出后请完整替换 JSON 文件，不要把 <code>"articles": [...]</code> 或 <code>"notes": [...]</code> 追加到旧文件中。较大的图片建议放入 <code>images/</code> 目录，并在 Markdown 中使用相对路径。</p>
+          <p style="margin-top: 12px;"><strong>浏览器：</strong>请使用最新版 Chrome 或 Edge。旧 Base64 图片会在写入项目时自动迁移。</p>
+        </div>
+
+        <div class="editor-btn-group editor-desktop-only">
+          <button class="editor-btn editor-btn-primary" onclick="Editor.connectProjectDirectory()">📁 选择博客根目录</button>
+          <button class="editor-btn editor-btn-primary" onclick="Editor.writeProjectData()">💾 立即写入项目</button>
+        </div>
+
+        <div class="editor-info-box" style="margin-top: 24px;">
+          <h3>📤 备用下载</h3>
+          <p>如果浏览器不支持目录写入，仍可下载完整 JSON 文件后覆盖项目中的同名文件。</p>
         </div>
 
         <div class="editor-btn-group">
@@ -149,7 +173,7 @@
           <label class="editor-form-label">图片上传</label>
           <div class="editor-image-upload" onclick="document.getElementById('article-image-input').click()">
             <div>📷 点击或拖放图片到编辑器</div>
-            <div style="font-size: 0.8rem; margin-top: 8px; opacity: 0.7;">支持 JPG, PNG, GIF, WebP · 单张 ≤ 3MB</div>
+            <div style="font-size: 0.8rem; margin-top: 8px; opacity: 0.7;">图片将保存到项目 images/，不再转为 Base64 · 单张 ≤ 20MB</div>
           </div>
           <input type="file" id="article-image-input" accept="image/*" multiple style="display:none;"
             onchange="Editor.handleImageUpload(this, 'article')">
@@ -214,7 +238,7 @@
           <label class="editor-form-label">图片上传</label>
           <div class="editor-image-upload" onclick="document.getElementById('note-image-input').click()">
             <div>📷 点击或拖放图片</div>
-            <div style="font-size: 0.8rem; margin-top: 8px; opacity: 0.7;">单张 ≤ 3MB</div>
+            <div style="font-size: 0.8rem; margin-top: 8px; opacity: 0.7;">直接保存到项目 images/ · 单张 ≤ 20MB</div>
           </div>
           <input type="file" id="note-image-input" accept="image/*" multiple style="display:none;"
             onchange="Editor.handleImageUpload(this, 'note')">
